@@ -25,3 +25,13 @@ export const DEFAULT_RULESETS: readonly NewUrlGroup[] = [
     matches: ['https:\\/\\/www\\.google\\.com\\/search\\?.*udm=50'],
   },
 ];
+
+/**
+ * Catch-all fallback: closes any tab that does not match a specific rule
+ * after 1 hour. Always evaluated last in the matching chain.
+ */
+export const DEFAULT_FALLBACK: NewUrlGroup = {
+  name: 'All Tabs',
+  closeTimeout: 3_600_000,
+  matches: ['.*'],
+};

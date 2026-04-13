@@ -4,7 +4,7 @@ import {
   StatsData,
   UrlGroup,
 } from '../types';
-import { DEFAULT_RULESETS } from '../config/rulesets';
+import { DEFAULT_RULESETS, DEFAULT_FALLBACK } from '../config/rulesets';
 import { generateId } from '../idGenerator';
 
 async function getStorageValue<T>(key: string, fallback: T): Promise<T> {
@@ -84,7 +84,16 @@ export function getDefaultGroups(): readonly UrlGroup[] {
   }));
 }
 
+export function getDefaultFallbackGroup(): UrlGroup {
+  return {
+    id: generateId(),
+    name: DEFAULT_FALLBACK.name,
+    closeTimeout: DEFAULT_FALLBACK.closeTimeout,
+    matches: [...DEFAULT_FALLBACK.matches],
+  };
+}
+
 export async function getAllGroups(): Promise<readonly UrlGroup[]> {
   const local = await getLocalData();
-  return [...getDefaultGroups(), ...local.groups];
+  return [...getDefaultGroups(), ...local.groups, getDefaultFallbackGroup()];
 }

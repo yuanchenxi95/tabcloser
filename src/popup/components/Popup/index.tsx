@@ -3,6 +3,7 @@ import { App, ConfigProvider, theme } from 'antd';
 import {
   getLocalData,
   getDefaultGroups,
+  getDefaultFallbackGroup,
   removeLocalGroupById,
   getStats,
 } from '../../../storage';
@@ -33,6 +34,7 @@ export function Popup() {
       getStats(),
     ]);
     const defaults = getDefaultGroups();
+    const fallback = getDefaultFallbackGroup();
     const merged: DisplayGroup[] = [
       ...defaults.map(
         (g): DisplayGroup => ({ source: GroupSource.DEFAULT, group: g }),
@@ -40,6 +42,7 @@ export function Popup() {
       ...local.groups.map(
         (g): DisplayGroup => ({ source: GroupSource.LOCAL, group: g }),
       ),
+      { source: GroupSource.DEFAULT, group: fallback },
     ];
     setDisplayGroups(merged);
     setStats(currentStats);
