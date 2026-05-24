@@ -1,0 +1,25 @@
+[
+  {
+    "name": "Google Docs",
+    "closeTimeout": 600000,
+    "matches": [
+      "https:\\/\\/docs\\.google\\.com\\/.*",
+      "https:\\/\\/sheets\\.google\\.com\\/.*",
+      "https:\\/\\/slides\\.google\\.com\\/.*"
+    ]
+  },
+  {
+    "name": "Gemini",
+    "closeTimeout": 3000000,
+    "matches": [
+      "https:\\/\\/gemini\\.google\\.com\\/.*"
+    ]
+  },
+  {
+    "name": "AI Mode",
+    "closeTimeout": 1200000,
+    "matches": [
+      "https:\\/\\/www\\.google\\.com\\/search\\?.*udm=50"
+    ]
+  }
+]

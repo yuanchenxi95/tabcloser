@@ -2,10 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { App, ConfigProvider, theme } from 'antd';
 import {
   getLocalData,
-  getDefaultGroups,
+  getMergedDefaultGroups,
   getDefaultFallbackGroup,
   removeLocalGroupById,
   getStats,
+  getSyncStatus,
+  syncRemoteDefaults,
 } from '../../../storage';
 import {
   PopupMode,
@@ -13,6 +15,7 @@ import {
   DisplayGroup,
   GroupSource,
   StatsData,
+  SyncStatus,
 } from '../../../types';
 import { exhaustiveSwitchGuard } from '../../../types/exhaustiveSwitchGuard';
 import { DefaultView } from './DefaultView';
@@ -27,13 +30,16 @@ export function Popup() {
   const [selectedGroup, setSelectedGroup] = useState<UrlGroup | undefined>();
   const [stats, setStats] = useState<StatsData>({ allClosed: 0 });
   const [groupToRemoveId, setGroupToRemoveId] = useState<string | null>(null);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>({ lastSyncTime: null, error: null });
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const reloadState = useCallback(async () => {
-    const [local, currentStats] = await Promise.all([
+    const [local, currentStats, defaults, currentSync] = await Promise.all([
       getLocalData(),
       getStats(),
+      getMergedDefaultGroups(),
+      getSyncStatus(),
     ]);
-    const defaults = getDefaultGroups();
     const fallback = getDefaultFallbackGroup();
     const merged: DisplayGroup[] = [
       ...defaults.map(
@@ -46,10 +52,35 @@ export function Popup() {
     ];
     setDisplayGroups(merged);
     setStats(currentStats);
+    setSyncStatus(currentSync);
   }, []);
 
   useEffect(() => {
-    reloadState();
+    reloadState().then(async () => {
+      // Auto-sync in popup if last sync was more than 24h ago
+      const status = await getSyncStatus();
+      const lastSync = status.lastSyncTime ? new Date(status.lastSyncTime).getTime() : 0;
+      const now = Date.now();
+      if (now - lastSync > 86400000) {
+        setIsSyncing(true);
+        try {
+          await syncRemoteDefaults();
+        } finally {
+          setIsSyncing(false);
+          reloadState();
+        }
+      }
+    });
+  }, [reloadState]);
+
+  const handleSync = useCallback(async () => {
+    setIsSyncing(true);
+    try {
+      await syncRemoteDefaults();
+    } finally {
+      setIsSyncing(false);
+      await reloadState();
+    }
   }, [reloadState]);
 
   const goToDefault = useCallback(() => {
@@ -94,6 +125,9 @@ export function Popup() {
             onCreate={() => setMode(PopupMode.CREATE_NEW)}
             onExport={() => setMode(PopupMode.EXPORT)}
             onImport={() => setMode(PopupMode.IMPORT)}
+            syncStatus={syncStatus}
+            isSyncing={isSyncing}
+            onSync={handleSync}
           />
         );
       case PopupMode.CREATE_NEW:

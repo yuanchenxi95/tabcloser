@@ -18,7 +18,7 @@ function isNewUrlGroup(value: unknown): value is NewUrlGroup {
   );
 }
 
-function isNewUrlGroupArray(value: unknown): value is NewUrlGroup[] {
+export function isNewUrlGroupArray(value: unknown): value is NewUrlGroup[] {
   return Array.isArray(value) && value.every(isNewUrlGroup);
 }
 

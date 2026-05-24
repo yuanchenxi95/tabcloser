@@ -18,7 +18,32 @@ export type StatsData = {
 export const STORAGE_KEYS = {
   LOCAL: 'ghksjk-local',
   STATS: 'ghksjk-stats',
+  REMOTE_DEFAULTS: 'ghksjk-remote-defaults',
+  LAST_SYNC: 'ghksjk-last-sync',
+  SYNC_ERROR: 'ghksjk-sync-error',
+  HISTORY: 'ghksjk-history',
 } as const;
+
+export type SyncStatus = {
+  readonly lastSyncTime: string | null;
+  readonly error: string | null;
+};
+
+export type HistoryEntry = {
+  readonly id: string;
+  readonly timestamp: string;
+  readonly url: string;
+  readonly groupName: string;
+  readonly status: 'closed' | 'failed';
+  readonly error?: string;
+};
+
+export type PendingClosure = {
+  readonly tabId: number;
+  readonly url: string;
+  readonly groupName: string;
+  readonly targetCloseTime: number;
+};
 
 export const enum GroupSource {
   DEFAULT = 'DEFAULT',

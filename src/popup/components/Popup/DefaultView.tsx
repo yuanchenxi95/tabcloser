@@ -1,13 +1,9 @@
-import { Button, List, Space, Statistic, Tag, Typography } from 'antd';
-import {
-  PlusOutlined,
-  ImportOutlined,
-  ExportOutlined,
-  EditOutlined,
-  DeleteOutlined,
-} from '@ant-design/icons';
-import { DisplayGroup, GroupSource, StatsData } from '../../../types';
-import { formatDuration } from '../../../formatDuration';
+import { Statistic, Tabs } from 'antd';
+import { SettingOutlined, SyncOutlined, HistoryOutlined } from '@ant-design/icons';
+import { DisplayGroup, StatsData, SyncStatus } from '../../../types';
+import { ConfigTab } from './ConfigTab';
+import { SyncTab } from './SyncTab';
+import { HistoryTab } from './HistoryTab';
 
 interface Props {
   readonly displayGroups: readonly DisplayGroup[];
@@ -17,6 +13,9 @@ interface Props {
   readonly onCreate: () => void;
   readonly onExport: () => void;
   readonly onImport: () => void;
+  readonly syncStatus: SyncStatus;
+  readonly isSyncing: boolean;
+  readonly onSync: () => void;
 }
 
 export function DefaultView({
@@ -27,80 +26,70 @@ export function DefaultView({
   onCreate,
   onExport,
   onImport,
+  syncStatus,
+  isSyncing,
+  onSync,
 }: Props) {
-  const hasLocalGroups = displayGroups.some(
-    (dg) => dg.source === GroupSource.LOCAL,
-  );
+  const tabItems = [
+    {
+      key: 'config',
+      label: (
+        <span>
+          <SettingOutlined /> Rules
+        </span>
+      ),
+      children: (
+        <ConfigTab
+          displayGroups={displayGroups}
+          onEdit={onEdit}
+          onRemove={onRemove}
+          onCreate={onCreate}
+          onExport={onExport}
+          onImport={onImport}
+        />
+      ),
+    },
+    {
+      key: 'sync',
+      label: (
+        <span>
+          <SyncOutlined spin={isSyncing} /> Sync
+        </span>
+      ),
+      children: (
+        <SyncTab
+          syncStatus={syncStatus}
+          isSyncing={isSyncing}
+          onSync={onSync}
+          displayGroups={displayGroups}
+        />
+      ),
+    },
+    {
+      key: 'history',
+      label: (
+        <span>
+          <HistoryOutlined /> History
+        </span>
+      ),
+      children: <HistoryTab />,
+    },
+  ];
 
   return (
     <div>
-      <Space style={{ width: '100%', justifyContent: 'space-between', marginBottom: 8 }}>
-        <Button type="primary" icon={<PlusOutlined />} size="small" onClick={onCreate}>
-          New
-        </Button>
-        <Space size="small">
-          <Button icon={<ImportOutlined />} size="small" onClick={onImport}>
-            Import
-          </Button>
-          {hasLocalGroups && (
-            <Button icon={<ExportOutlined />} size="small" onClick={onExport}>
-              Export
-            </Button>
-          )}
-        </Space>
-      </Space>
-
       <Statistic
-        title="Tabs closed"
+        title="Total tabs closed"
         value={stats.allClosed}
-        style={{ marginBottom: 8 }}
-        valueStyle={{ fontSize: 16 }}
+        style={{ marginBottom: 12 }}
+        valueStyle={{ fontSize: 18, fontWeight: 'bold', color: '#1677ff' }}
       />
 
-      <List
+      <Tabs
+        defaultActiveKey="config"
+        items={tabItems}
         size="small"
-        dataSource={[...displayGroups]}
-        locale={{ emptyText: 'No rules configured' }}
-        renderItem={(dg) => {
-          const isDefault = dg.source === GroupSource.DEFAULT;
-          return (
-            <List.Item
-              actions={
-                isDefault
-                  ? undefined
-                  : [
-                      <Button
-                        key="edit"
-                        type="text"
-                        size="small"
-                        icon={<EditOutlined />}
-                        onClick={() => onEdit(dg.group.id)}
-                      />,
-                      <Button
-                        key="delete"
-                        type="text"
-                        size="small"
-                        danger
-                        icon={<DeleteOutlined />}
-                        onClick={() => onRemove(dg.group.id)}
-                      />,
-                    ]
-              }
-            >
-              <List.Item.Meta
-                title={
-                  <Space size={4}>
-                    <Typography.Text style={{ fontSize: 13 }}>
-                      {dg.group.name}
-                    </Typography.Text>
-                    {isDefault && <Tag color="blue">Default</Tag>}
-                  </Space>
-                }
-                description={`${dg.group.matches.length} pattern(s), ${formatDuration(dg.group.closeTimeout)}`}
-              />
-            </List.Item>
-          );
-        }}
+        animated={{ inkBar: true, tabPane: false }}
       />
     </div>
   );

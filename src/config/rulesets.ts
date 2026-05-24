@@ -28,10 +28,10 @@ export const DEFAULT_RULESETS: readonly NewUrlGroup[] = [
 
 /**
  * Catch-all fallback: closes any tab that does not match a specific rule
- * after 1 hour. Always evaluated last in the matching chain.
+ * after 30 minutes. Always evaluated last in the matching chain.
  */
 export const DEFAULT_FALLBACK: NewUrlGroup = {
   name: 'All Tabs',
-  closeTimeout: 3_600_000,
+  closeTimeout: 1_800_000,
   matches: ['.*'],
 };
