@@ -140,7 +140,9 @@ export async function getAllGroups(): Promise<readonly UrlGroup[]> {
     getLocalData(),
     getMergedDefaultGroups(),
   ]);
-  return [...defaults, ...local.groups, getDefaultFallbackGroup()];
+  const hasFallback = defaults.some((g) => g.name === 'All Tabs');
+  const fallbackList = hasFallback ? [] : [getDefaultFallbackGroup()];
+  return [...defaults, ...local.groups, ...fallbackList];
 }
 
 export async function getHistory(): Promise<readonly HistoryEntry[]> {

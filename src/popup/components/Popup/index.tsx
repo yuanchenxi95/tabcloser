@@ -40,6 +40,7 @@ export function Popup() {
       getMergedDefaultGroups(),
       getSyncStatus(),
     ]);
+    const hasFallback = defaults.some((g) => g.name === 'All Tabs');
     const fallback = getDefaultFallbackGroup();
     const merged: DisplayGroup[] = [
       ...defaults.map(
@@ -48,7 +49,7 @@ export function Popup() {
       ...local.groups.map(
         (g): DisplayGroup => ({ source: GroupSource.LOCAL, group: g }),
       ),
-      { source: GroupSource.DEFAULT, group: fallback },
+      ...(hasFallback ? [] : [{ source: GroupSource.DEFAULT, group: fallback }]),
     ];
     setDisplayGroups(merged);
     setStats(currentStats);

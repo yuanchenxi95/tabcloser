@@ -21,5 +21,12 @@
     "matches": [
       "https:\\/\\/www\\.google\\.com\\/search\\?.*udm=50"
     ]
+  },
+  {
+    "name": "All Tabs",
+    "closeTimeout": 1800000,
+    "matches": [
+      ".*"
+    ]
   }
 ]

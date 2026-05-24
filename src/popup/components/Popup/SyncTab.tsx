@@ -19,9 +19,9 @@ export function SyncTab({ syncStatus, isSyncing, onSync, displayGroups }: Props)
   const remoteUrl =
     'https://raw.githubusercontent.com/yuanchenxi95/tabcloser/main/default_rules.json';
 
-  // Filter for remote/default rules (excluding fallback 'All Tabs')
+  // Filter for remote/default rules
   const defaultRules = displayGroups
-    .filter((dg) => dg.source === GroupSource.DEFAULT && dg.group.name !== 'All Tabs')
+    .filter((dg) => dg.source === GroupSource.DEFAULT)
     .map((dg) => dg.group);
 
   return (
