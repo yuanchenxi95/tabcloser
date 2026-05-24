@@ -85,7 +85,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 async function scanAndCloseTabs(): Promise<void> {
   logEvent('SCAN_TABS_START');
   try {
-    const tabs = await chrome.tabs.query({ windowType: 'normal' });
+    const tabs = await chrome.tabs.query({}); // Query all tabs in all windows (normal, popup, and automation debugger windows)
     const groups = await getAllGroups();
     const currentRegistry = await getActiveCountdowns();
 
@@ -107,15 +107,16 @@ async function scanAndCloseTabs(): Promise<void> {
     const nextRegistry: ActiveCountdown[] = [];
 
     for (const tab of tabs) {
-      if (tab.id === undefined || !tab.url) {
+      const url = tab.url || tab.pendingUrl;
+      if (tab.id === undefined || !url) {
         continue;
       }
 
-      const matchedGroup = findMatchingGroup(groups, tab.url);
+      const matchedGroup = findMatchingGroup(groups, url);
       if (matchedGroup) {
         const existing = registryMap.get(tab.id);
 
-        if (existing !== undefined && existing.url === tab.url) {
+        if (existing !== undefined && existing.url === url) {
           // Tab is already tracked! Let's calculate the elapsed time since initialization
           const elapsed = Date.now() - existing.initializedTime;
           if (elapsed >= existing.closeTimeout) {
@@ -123,16 +124,16 @@ async function scanAndCloseTabs(): Promise<void> {
             try {
               await chrome.tabs.remove(tab.id);
               await incrementClosedCount();
-              await addHistoryEntry({ url: tab.url, groupName: existing.groupName, status: 'closed' });
-              logEvent('TAB_CLOSED', { tabId: tab.id, groupName: existing.groupName, url: tab.url });
+              await addHistoryEntry({ url, groupName: existing.groupName, status: 'closed' });
+              logEvent('TAB_CLOSED', { tabId: tab.id, groupName: existing.groupName, url });
             } catch (e) {
               await addHistoryEntry({
-                url: tab.url,
+                url,
                 groupName: existing.groupName,
                 status: 'failed',
                 error: String(e),
               });
-              logEvent('TAB_CLOSE_FAILED', { tabId: tab.id, error: String(e), url: tab.url });
+              logEvent('TAB_CLOSE_FAILED', { tabId: tab.id, error: String(e), url });
             }
             // Since the tab was closed, we do not add it to nextRegistry!
           } else {
@@ -145,14 +146,14 @@ async function scanAndCloseTabs(): Promise<void> {
           // We say it is INITIALIZED!
           const newCountdown: ActiveCountdown = {
             tabId: tab.id,
-            url: tab.url,
+            url,
             groupName: matchedGroup.name,
             initializedTime: Date.now(),
             closeTimeout: matchedGroup.closeTimeout,
           };
           nextRegistry.push(newCountdown);
           setTabIcon(tab.id, ICONS.ACTION);
-          logEvent('TAB_INITIALIZED', { tabId: tab.id, groupName: matchedGroup.name, url: tab.url });
+          logEvent('TAB_INITIALIZED', { tabId: tab.id, groupName: matchedGroup.name, url });
         }
       } else {
         // Tab does not match any rules. If it was tracked, clear its action icon
@@ -172,7 +173,8 @@ async function scanAndCloseTabs(): Promise<void> {
 
 // Bind tab event listeners to trigger immediate scan-and-close runs
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-  if (!tab.url) {
+  const url = tab.url || tab.pendingUrl;
+  if (!url) {
     return;
   }
   const hasUrlChange = changeInfo.url !== undefined;
