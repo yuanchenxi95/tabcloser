@@ -6,6 +6,7 @@ import {
   NewUrlGroup,
   SyncStatus,
   HistoryEntry,
+  ActiveCountdown,
 } from '../types';
 import { isNewUrlGroupArray } from '../types/typeGuards';
 import { DEFAULT_RULESETS, DEFAULT_FALLBACK } from '../config/rulesets';
@@ -170,4 +171,12 @@ export async function addHistoryEntry(
 
 export async function clearHistory(): Promise<void> {
   await setStorageValue(STORAGE_KEYS.HISTORY, []);
+}
+
+export async function getActiveCountdowns(): Promise<readonly ActiveCountdown[]> {
+  return getStorageValue<readonly ActiveCountdown[]>(STORAGE_KEYS.ACTIVE_COUNTDOWNS, []);
+}
+
+export async function saveActiveCountdowns(countdowns: readonly ActiveCountdown[]): Promise<void> {
+  await setStorageValue(STORAGE_KEYS.ACTIVE_COUNTDOWNS, countdowns);
 }

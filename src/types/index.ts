@@ -22,7 +22,16 @@ export const STORAGE_KEYS = {
   LAST_SYNC: 'ghksjk-last-sync',
   SYNC_ERROR: 'ghksjk-sync-error',
   HISTORY: 'ghksjk-history',
+  ACTIVE_COUNTDOWNS: 'ghksjk-active-countdowns',
 } as const;
+
+export type ActiveCountdown = {
+  readonly tabId: number;
+  readonly url: string;
+  readonly groupName: string;
+  readonly initializedTime: number;
+  readonly closeTimeout: number;
+};
 
 export type SyncStatus = {
   readonly lastSyncTime: string | null;
