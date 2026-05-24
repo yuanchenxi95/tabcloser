@@ -25,24 +25,115 @@ function setTabIcon(tabId: number, iconPath: string): void {
   chrome.action.setIcon({ tabId, path: iconPath });
 }
 
-// Sync default rulesets from remote on service worker startup, install, and browser startup.
-syncRemoteDefaults().catch((err) => {
-  logEvent('BACKGROUND_SYNC_ERROR', { error: String(err) });
-});
+// Periodic and triggered scanner to match all open browser tabs against active rulesets
+async function scanAllTabs(): Promise<void> {
+  logEvent('SCAN_TABS_START');
+  try {
+    const tabs = await chrome.tabs.query({ windowType: 'normal' });
+    const groups = await getAllGroups();
+    const seenTabIds = new Set<number>();
+
+    for (const tab of tabs) {
+      if (tab.id === undefined || !tab.url) {
+        continue;
+      }
+      seenTabIds.add(tab.id);
+
+      const matchedGroup = findMatchingGroup(groups, tab.url);
+      if (matchedGroup) {
+        const existing = activeClosures.get(tab.id);
+
+        // If the tab is not tracked yet, or if the URL has changed since we last matched it
+        if (existing === undefined || existing.url !== tab.url) {
+          setTabIcon(tab.id, ICONS.ACTION);
+
+          if (existing !== undefined) {
+            clearTimeout(existing.timeoutId);
+          }
+
+          const tabId = tab.id;
+          const url = tab.url;
+          const targetCloseTime = Date.now() + matchedGroup.closeTimeout;
+
+          const timeoutId = setTimeout(async () => {
+            try {
+              await chrome.tabs.remove(tabId);
+              await incrementClosedCount();
+              await addHistoryEntry({ url, groupName: matchedGroup.name, status: 'closed' });
+              logEvent('TAB_CLOSED', { tabId, groupName: matchedGroup.name, url });
+            } catch (e) {
+              await addHistoryEntry({
+                url,
+                groupName: matchedGroup.name,
+                status: 'failed',
+                error: String(e),
+              });
+              logEvent('TAB_CLOSE_FAILED', { tabId, error: String(e), url });
+            } finally {
+              activeClosures.delete(tabId);
+            }
+          }, matchedGroup.closeTimeout);
+
+          activeClosures.set(tabId, {
+            url,
+            groupName: matchedGroup.name,
+            targetCloseTime,
+            timeoutId,
+          });
+          logEvent('TAB_MATCHED', { tabId, groupName: matchedGroup.name, url });
+        }
+      } else {
+        // If it was tracked but no longer matches under the new rulesets, clear the timer
+        const existing = activeClosures.get(tab.id);
+        if (existing !== undefined) {
+          clearTimeout(existing.timeoutId);
+          activeClosures.delete(tab.id);
+          setTabIcon(tab.id, ICONS.DEFAULT);
+        }
+      }
+    }
+
+    // Garbage collect activeClosures mapping for tabs that were closed while worker was sleeping
+    for (const tabId of activeClosures.keys()) {
+      if (!seenTabIds.has(tabId)) {
+        const existing = activeClosures.get(tabId);
+        if (existing !== undefined) {
+          clearTimeout(existing.timeoutId);
+        }
+        activeClosures.delete(tabId);
+      }
+    }
+
+    logEvent('SCAN_TABS_SUCCESS', { count: tabs.length });
+  } catch (err) {
+    logEvent('SCAN_TABS_FAILED', { error: String(err) });
+  }
+}
+
+// Sync default rulesets and trigger an initial scan on startup/load
+syncRemoteDefaults()
+  .then(() => scanAllTabs())
+  .catch((err) => {
+    logEvent('BACKGROUND_SYNC_ERROR', { error: String(err) });
+  });
 
 chrome.runtime.onInstalled.addListener(() => {
-  syncRemoteDefaults().catch((err) => {
-    logEvent('ON_INSTALLED_SYNC_ERROR', { error: String(err) });
-  });
+  syncRemoteDefaults()
+    .then(() => scanAllTabs())
+    .catch((err) => {
+      logEvent('ON_INSTALLED_SYNC_ERROR', { error: String(err) });
+    });
 });
 
 chrome.runtime.onStartup.addListener(() => {
-  syncRemoteDefaults().catch((err) => {
-    logEvent('ON_STARTUP_SYNC_ERROR', { error: String(err) });
-  });
+  syncRemoteDefaults()
+    .then(() => scanAllTabs())
+    .catch((err) => {
+      logEvent('ON_STARTUP_SYNC_ERROR', { error: String(err) });
+    });
 });
 
-// Listener for popup queries regarding active closures
+// Listener for popup queries and rule updates
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === 'GET_PENDING_CLOSURES') {
     const list = Array.from(activeClosures.entries()).map(([tabId, data]) => ({
@@ -52,6 +143,11 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       targetCloseTime: data.targetCloseTime,
     }));
     sendResponse(list);
+  } else if (message.type === 'RULES_CHANGED' || message.type === 'SCAN_TABS') {
+    scanAllTabs().then(() => {
+      sendResponse({ success: true });
+    });
+    return true; // Keep message channel open for async response
   }
   return true; // Keep message channel open for async response
 });

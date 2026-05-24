@@ -78,6 +78,9 @@ export function Popup() {
     setIsSyncing(true);
     try {
       await syncRemoteDefaults();
+      if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+        chrome.runtime.sendMessage({ type: 'RULES_CHANGED' });
+      }
     } finally {
       setIsSyncing(false);
       await reloadState();
@@ -110,6 +113,9 @@ export function Popup() {
   const handleRemoveConfirm = useCallback(async () => {
     if (groupToRemoveId) {
       await removeLocalGroupById(groupToRemoveId);
+      if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+        chrome.runtime.sendMessage({ type: 'RULES_CHANGED' });
+      }
     }
     goToDefault();
   }, [groupToRemoveId, goToDefault]);

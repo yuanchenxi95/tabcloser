@@ -28,6 +28,9 @@ export function ImportModal({ onClose }: Props) {
         matches: [...g.matches],
       }));
       await importLocalData({ groups }, replace);
+      if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+        chrome.runtime.sendMessage({ type: 'RULES_CHANGED' });
+      }
       onClose();
     } catch {
       setError('Invalid JSON');

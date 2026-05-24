@@ -53,6 +53,9 @@ export function SaveModal({ onClose, existingGroup }: Props) {
       matches: matchList,
     };
     await saveLocalGroup(group);
+    if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+      chrome.runtime.sendMessage({ type: 'RULES_CHANGED' });
+    }
     onClose();
   };
 
