@@ -56,8 +56,16 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   return true; // Keep message channel open for async response
 });
 
-chrome.tabs.onUpdated.addListener(async (tabId, _changes, tab) => {
-  if (tab.status !== 'complete' || !tab.url) {
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  if (!tab.url) {
+    return;
+  }
+
+  // To support automation protocols (CDP) and prevent infinite timer resets on minor updates:
+  // Only evaluate rules if the URL itself has changed, or if there is a loading status update.
+  const hasUrlChange = changeInfo.url !== undefined;
+  const hasStatusChange = changeInfo.status !== undefined;
+  if (!hasUrlChange && !hasStatusChange) {
     return;
   }
 
@@ -65,9 +73,21 @@ chrome.tabs.onUpdated.addListener(async (tabId, _changes, tab) => {
   const matchedGroup = findMatchingGroup(groups, tab.url);
 
   if (matchedGroup) {
+    const existing = activeClosures.get(tabId);
+
+    // If we already have an active closure for this tab AND the URL is identical,
+    // we only reset the timer if the page is explicitly loading or reloading.
+    // This prevents layout/title updates from extending the lifetime forever.
+    if (existing !== undefined && existing.url === tab.url) {
+      if (changeInfo.status !== 'loading') {
+        // Keep the existing timer but ensure the active action icon is set.
+        setTabIcon(tabId, ICONS.ACTION);
+        return;
+      }
+    }
+
     setTabIcon(tabId, ICONS.ACTION);
 
-    const existing = activeClosures.get(tabId);
     if (existing !== undefined) {
       clearTimeout(existing.timeoutId);
       activeClosures.delete(tabId);
