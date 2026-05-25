@@ -62,14 +62,16 @@ setInterval(() => {
 // Listener for popup queries and rule updates
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === 'GET_PENDING_CLOSURES') {
-    getActiveCountdowns().then((countdowns) => {
-      const list = countdowns.map((c) => ({
-        tabId: c.tabId,
-        url: c.url,
-        groupName: c.groupName,
-        targetCloseTime: c.initializedTime + c.closeTimeout,
-      }));
-      sendResponse(list);
+    scanAndCloseTabs().then(() => {
+      getActiveCountdowns().then((countdowns) => {
+        const list = countdowns.map((c) => ({
+          tabId: c.tabId,
+          url: c.url,
+          groupName: c.groupName,
+          targetCloseTime: c.initializedTime + c.closeTimeout,
+        }));
+        sendResponse(list);
+      });
     });
     return true; // Keep message channel open for async response
   } else if (message.type === 'RULES_CHANGED' || message.type === 'SCAN_TABS') {
