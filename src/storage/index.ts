@@ -7,6 +7,8 @@ import {
   SyncStatus,
   HistoryEntry,
   ActiveCountdown,
+  ExtensionSettings,
+  DEFAULT_SETTINGS,
 } from '../types';
 import { isNewUrlGroupArray } from '../types/typeGuards';
 import { DEFAULT_RULESETS, DEFAULT_FALLBACK } from '../config/rulesets';
@@ -179,4 +181,20 @@ export async function getActiveCountdowns(): Promise<readonly ActiveCountdown[]>
 
 export async function saveActiveCountdowns(countdowns: readonly ActiveCountdown[]): Promise<void> {
   await setStorageValue(STORAGE_KEYS.ACTIVE_COUNTDOWNS, countdowns);
+}
+
+export async function getEnabled(): Promise<boolean> {
+  return getStorageValue(STORAGE_KEYS.ENABLED, true);
+}
+
+export async function setEnabled(value: boolean): Promise<void> {
+  return setStorageValue(STORAGE_KEYS.ENABLED, value);
+}
+
+export async function getSettings(): Promise<ExtensionSettings> {
+  return getStorageValue<ExtensionSettings>(STORAGE_KEYS.SETTINGS, DEFAULT_SETTINGS);
+}
+
+export async function saveSettings(settings: ExtensionSettings): Promise<void> {
+  await setStorageValue(STORAGE_KEYS.SETTINGS, settings);
 }

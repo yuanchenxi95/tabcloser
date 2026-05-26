@@ -8,6 +8,8 @@ import {
   getStats,
   getSyncStatus,
   syncRemoteDefaults,
+  getEnabled,
+  setEnabled,
 } from '../../../storage';
 import {
   PopupMode,
@@ -32,13 +34,15 @@ export function Popup() {
   const [groupToRemoveId, setGroupToRemoveId] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>({ lastSyncTime: null, error: null });
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isEnabled, setIsEnabled] = useState(true);
 
   const reloadState = useCallback(async () => {
-    const [local, currentStats, defaults, currentSync] = await Promise.all([
+    const [local, currentStats, defaults, currentSync, enabled] = await Promise.all([
       getLocalData(),
       getStats(),
       getMergedDefaultGroups(),
       getSyncStatus(),
+      getEnabled(),
     ]);
     const hasFallback = defaults.some((g) => g.name === 'All Tabs');
     const fallback = getDefaultFallbackGroup();
@@ -54,6 +58,7 @@ export function Popup() {
     setDisplayGroups(merged);
     setStats(currentStats);
     setSyncStatus(currentSync);
+    setIsEnabled(enabled);
   }, []);
 
   useEffect(() => {
@@ -72,6 +77,14 @@ export function Popup() {
         }
       }
     });
+  }, [reloadState]);
+
+  const handleToggleEnabled = useCallback(async (value: boolean) => {
+    await setEnabled(value);
+    if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+      await chrome.runtime.sendMessage({ type: 'SCAN_TABS' });
+    }
+    await reloadState();
   }, [reloadState]);
 
   const handleSync = useCallback(async () => {
@@ -135,6 +148,8 @@ export function Popup() {
             syncStatus={syncStatus}
             isSyncing={isSyncing}
             onSync={handleSync}
+            isEnabled={isEnabled}
+            onToggleEnabled={handleToggleEnabled}
           />
         );
       case PopupMode.CREATE_NEW:

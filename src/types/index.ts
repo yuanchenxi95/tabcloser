@@ -23,6 +23,8 @@ export const STORAGE_KEYS = {
   SYNC_ERROR: 'ghksjk-sync-error',
   HISTORY: 'ghksjk-history',
   ACTIVE_COUNTDOWNS: 'ghksjk-active-countdowns',
+  ENABLED: 'ghksjk-enabled',
+  SETTINGS: 'ghksjk-settings',
 } as const;
 
 export type ActiveCountdown = {
@@ -82,4 +84,14 @@ export type ExportData = {
   readonly data: {
     readonly groups: readonly NewUrlGroup[];
   };
+};
+
+export type ExtensionSettings = {
+  readonly protectActiveTab: boolean;
+  readonly protectLastTab: boolean;
+};
+
+export const DEFAULT_SETTINGS: ExtensionSettings = {
+  protectActiveTab: true,
+  protectLastTab: true,
 };
